@@ -9,9 +9,16 @@ A Pokédex built on [PokeAPI](https://pokeapi.co/): a **Laravel** API aggregates
 └── README.md
 ```
 
+## Features
+- Carousel banner (3 slides, auto-rotating) with two static banners.
+- Pokémon cards (artwork, name, type badges) in a 3-column grid with infinite scroll.
+- Search by name (type to search, or press Enter / the Search button).
+- While scrolling, the banners scroll away; the side images and the search bar stay fixed.
+- The frontend only calls the Laravel API, never PokeAPI directly.
+
 ## Requirements
 - PHP >= 8.3 and Composer
-- Node.js >= 20 and npm
+- Node.js >= 20.9 and npm
 - Internet access (the backend calls pokeapi.co)
 
 ## Setup
@@ -24,6 +31,7 @@ cp .env.example .env
 php artisan key:generate
 php artisan serve
 ```
+No database is needed (the `DB_*`, session and cache lines in `.env.example` are unused).
 
 ### 2. Frontend (http://localhost:3000)
 ```bash
