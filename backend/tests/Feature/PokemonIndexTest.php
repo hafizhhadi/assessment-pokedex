@@ -183,6 +183,17 @@ class PokemonIndexTest extends TestCase
             ->assertExactJson([$this->expected(6)]);
     }
 
+    public function test_a_blank_search_behaves_like_no_search(): void
+    {
+        $this->fakePokeApi();
+
+        $this->getJson('/api/pokemons?search=%20%20&limit=2')
+            ->assertOk()
+            ->assertExactJson([$this->expected(1), $this->expected(2)]);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://pokeapi.co/api/v2/pokemon?limit=2&offset=0');
+    }
+
     public function test_search_with_no_match_returns_an_empty_array(): void
     {
         $this->fakePokeApi();

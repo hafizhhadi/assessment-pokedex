@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="260" viewBox="0 0 600 260" role="img" aria-label="Static banner 2">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0d6"/><stop offset="1" stop-color="#fbdfa6"/></linearGradient></defs>
+  <rect width="600" height="260" fill="url(#g)"/>
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="34" font-weight="600" fill="#1f2937" fill-opacity="0.75">Static banner 2</text>
+</svg>

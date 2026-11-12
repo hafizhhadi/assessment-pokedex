@@ -38,7 +38,7 @@ Start the backend first, then open http://localhost:3000.
 ### Tests
 ```bash
 cd backend && php artisan test
-cd frontend && npm run lint
+cd frontend && npm test && npm run lint
 ```
 
 ## API documentation
