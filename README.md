@@ -51,20 +51,30 @@ cd frontend && npm test && npm run lint
 
 ## API documentation
 
+**Base URL (local):** `http://localhost:8000`. All responses are JSON. There is no authentication, and CORS is open to any origin, so the Next.js app on `http://localhost:3000` can call the API directly.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/pokemons` | List Pokémon (paginated, optional name search) |
+| `GET` | `/up` | Health check, returns `200` while the app is running |
+
 ### `GET /api/pokemons`
 
-Returns a page of Pokémon as a JSON array, merged from PokeAPI's list and detail endpoints. Pass `search` to filter by name.
+Returns a page of Pokémon as a JSON array, merged from PokeAPI's list and detail endpoints.
 
-| Query param | Type | Default | Description |
-|-------------|------|---------|-------------|
-| `page`   | integer >= 1 | `1`  | Page number. Offset sent to PokeAPI is `(page - 1) * limit`. |
-| `limit`  | integer 1-50 | `20` | Items per page. |
-| `search` | string, max 50 | none | Case-insensitive substring match on the Pokémon name (e.g. `char` finds charmander, charizard, ...). Pagination applies to the matches. |
+**Query parameters** (all optional)
 
-**Example**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page`   | integer >= 1   | `1`  | Page number. The offset sent to PokeAPI is `(page - 1) * limit`. |
+| `limit`  | integer 1-50   | `20` | Items per page. |
+| `search` | string, max 50 | none | Case-insensitive substring match on the Pokémon name. Pagination applies to the matches. |
+
+**Examples**
 ```bash
-curl "http://localhost:8000/api/pokemons?page=1&limit=2"
-curl "http://localhost:8000/api/pokemons?search=char&limit=5"
+curl "http://localhost:8000/api/pokemons"                          # page 1, 20 items
+curl "http://localhost:8000/api/pokemons?page=2&limit=10"          # items 11-20
+curl "http://localhost:8000/api/pokemons?search=char&limit=5"      # charmander, charmeleon, ...
 ```
 
 **Response `200`**
@@ -79,22 +89,36 @@ curl "http://localhost:8000/api/pokemons?search=char&limit=5"
   }
 ]
 ```
-An empty array `[]` means no Pokémon on that page / no name match.
 
 | Field | Type | Source (PokeAPI detail) |
 |-------|------|-------------------------|
 | `name`   | string        | `name` |
-| `image`  | string / null | `sprites.other.official-artwork.front_default` |
+| `image`  | string / null | `sprites.other.official-artwork.front_default`; `null` when there is no artwork |
 | `types`  | string[]      | `types[].type.name` |
 | `height` | integer       | `height` (decimetres) |
 | `weight` | integer       | `weight` (hectograms) |
 
-**Errors**
+**Notes**
+- **Pagination:** no total count is returned. A page with fewer than `limit` items is the last page, and a page past the end returns `[]`.
+- **Order:** PokeAPI order (Pokédex number); alternate forms such as `charizard-mega-x` come after the base species.
+- **Search** matches the API name, so alternate forms are included: `search=pikachu` returns `pikachu`, `pikachu-rock-star`, `pikachu-libre`, ... `[]` means nothing matched.
+- **Image:** the assessment's sample JSON shows the small sprite (`sprites/pokemon/2.png`), but its text says to use `sprites.other.official-artwork.front_default`, so the official artwork is returned.
+
+### Errors
 
 | Status | When | Body |
 |--------|------|------|
 | `422` | invalid `page`, `limit` or `search` | `{ "success": false, "errors": { "limit": ["The limit field must not be greater than 50."] } }` |
 | `502` | PokeAPI unreachable or returned an error | `{ "status": "error", "code": 502, "message": "Unable to fetch data from PokeAPI.", "file": "", "line": null, "meta": { "timestamp": "..." }, "data": null }` |
+| `404` | unknown route | `{ "message": "The route api/nope could not be found." }` |
+| `405` | method other than `GET` | `{ "message": "The POST method is not supported for route api/pokemons. Supported methods: GET, HEAD." }` |
+
+`422` example (every invalid field is listed):
+```bash
+curl "http://localhost:8000/api/pokemons?page=0&limit=99"
+# {"success":false,"errors":{"page":["The page field must be at least 1."],"limit":["The limit field must not be greater than 50."]}}
+```
+With `APP_DEBUG=true` (the `.env.example` default, for local development) Laravel adds `exception`, `file` and `trace` fields to `404` / `405` bodies; set `APP_DEBUG=false` in production.
 
 ### How it works
 1. Without `search`: one call to PokeAPI `pokemon?limit=<limit>&offset=<offset>`.
