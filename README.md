@@ -81,4 +81,4 @@ curl "http://localhost:8000/api/pokemons?page=1&limit=2"
 
 **Errors**: `422` invalid `page`/`limit`; `502` PokeAPI unavailable. Error body: `{ "message": "..." }`.
 
-> Status: scaffolding only. The endpoint above is the target contract and is not implemented yet.
+> Status: backend endpoint implemented and tested (`php artisan test`). Responses are cached per `page`/`limit` for `POKEAPI_CACHE_TTL` seconds (default 3600).
