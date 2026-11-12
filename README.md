@@ -23,7 +23,9 @@ A Pokédex built on [PokeAPI](https://pokeapi.co/): a **Laravel** API aggregates
 
 ## Setup
 
-### 1. Backend (http://localhost:8000)
+You need **two terminals**, one for the backend and one for the frontend. **Both must be running**, because the frontend gets all its data from the backend.
+
+### Terminal 1: backend (API on http://localhost:8000)
 ```bash
 cd backend
 composer install
@@ -31,17 +33,28 @@ cp .env.example .env
 php artisan key:generate
 php artisan serve
 ```
-No database is needed (the `DB_*`, session and cache lines in `.env.example` are unused).
+No database is needed (the `DB_*`, session and cache lines in `.env.example` are unused). Leave this running.
+Check it works: open http://localhost:8000/api/pokemons?limit=2 and you should see JSON.
 
-### 2. Frontend (http://localhost:3000)
+### Terminal 2: frontend (app on http://localhost:3000)
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local   # sets NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run dev
 ```
+`npm run dev` needs no build step. To run the production build instead: `npm run build`, then `npm start`.
+Optional: `cp .env.example .env.local` to set `NEXT_PUBLIC_API_URL` (the default is already `http://localhost:8000`).
 
-Start the backend first, then open http://localhost:3000.
+### Open the app
+Go to **http://localhost:3000** on the same computer that runs both servers. You should see the carousel, banners, search bar and Pokémon cards.
+
+### If something looks wrong
+| Symptom | Fix |
+|---------|-----|
+| The page loads but there are no cards, or it says "Unable to reach the server" | The backend is not running. Start Terminal 1 and click "Try again" (or refresh). |
+| It works on `localhost` but not from a phone or another computer (e.g. `http://192.168.x.x:3000`) | The frontend calls the API at `localhost:8000`, which on another device means that device. Use `http://localhost:3000` on the same computer. |
+| `npm start` says there is no production build | Run `npm run build` first, or use `npm run dev`. |
+| Port 8000 or 3000 is already in use | Use another port, e.g. `php artisan serve --port=8001`, and set `NEXT_PUBLIC_API_URL=http://localhost:8001` in `frontend/.env.local`, then restart (rebuild if you use `npm start`). |
 
 ### Tests
 ```bash
