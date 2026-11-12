@@ -19,6 +19,7 @@ class PokemonIndexRequest extends FormRequest
         return [
             'page' => ['nullable', 'integer', 'min:1'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'search' => ['nullable', 'string', 'max:50'],
         ];
     }
 
@@ -30,5 +31,10 @@ class PokemonIndexRequest extends FormRequest
     public function limit(): int
     {
         return (int) ($this->validated('limit') ?? 20);
+    }
+
+    public function search(): ?string
+    {
+        return $this->validated('search');
     }
 }

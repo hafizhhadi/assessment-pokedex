@@ -9,28 +9,52 @@ use Tests\TestCase;
 
 class PokemonIndexTest extends TestCase
 {
-    private function fakePokeApi(int $count = 2, int $offset = 0): void
+    private const CATALOG = [
+        1 => ['name' => 'bulbasaur', 'types' => ['grass', 'poison'], 'height' => 7, 'weight' => 69],
+        2 => ['name' => 'ivysaur', 'types' => ['grass', 'poison'], 'height' => 10, 'weight' => 130],
+        3 => ['name' => 'venusaur', 'types' => ['grass', 'poison'], 'height' => 20, 'weight' => 1000],
+        4 => ['name' => 'charmander', 'types' => ['fire'], 'height' => 6, 'weight' => 85],
+        5 => ['name' => 'charmeleon', 'types' => ['fire'], 'height' => 11, 'weight' => 190],
+        6 => ['name' => 'charizard', 'types' => ['fire', 'flying'], 'height' => 17, 'weight' => 905],
+    ];
+
+    private function detailUrl(int $id): string
     {
-        $results = [];
-        $fakes = [];
+        return "https://pokeapi.co/api/v2/pokemon/{$id}/";
+    }
 
-        $details = [
-            1 => ['name' => 'bulbasaur', 'types' => ['grass', 'poison'], 'height' => 7, 'weight' => 69],
-            2 => ['name' => 'ivysaur', 'types' => ['grass', 'poison'], 'height' => 10, 'weight' => 130],
-            3 => ['name' => 'venusaur', 'types' => ['grass', 'poison'], 'height' => 20, 'weight' => 1000],
+    private function expected(int $id): array
+    {
+        $pokemon = self::CATALOG[$id];
+
+        return [
+            'name' => $pokemon['name'],
+            'image' => "https://img.test/official-artwork/{$id}.png",
+            'types' => $pokemon['types'],
+            'height' => $pokemon['height'],
+            'weight' => $pokemon['weight'],
         ];
+    }
 
-        foreach (array_slice($details, $offset, $count, true) as $id => $detail) {
-            $url = "https://pokeapi.co/api/v2/pokemon/{$id}/";
-            $results[] = ['name' => $detail['name'], 'url' => $url];
-            $fakes[$url] = Http::response([
-                'name' => $detail['name'],
-                'height' => $detail['height'],
-                'weight' => $detail['weight'],
+    /**
+     * Fake PokeAPI: a paginated list endpoint plus one detail endpoint per Pokémon.
+     */
+    private function fakePokeApi(): void
+    {
+        $fakes = [];
+        $entries = [];
+
+        foreach (self::CATALOG as $id => $pokemon) {
+            $entries[] = ['name' => $pokemon['name'], 'url' => $this->detailUrl($id)];
+
+            $fakes[$this->detailUrl($id)] = Http::response([
+                'name' => $pokemon['name'],
+                'height' => $pokemon['height'],
+                'weight' => $pokemon['weight'],
                 'types' => array_map(
                     fn (string $type, int $slot) => ['slot' => $slot + 1, 'type' => ['name' => $type]],
-                    $detail['types'],
-                    array_keys($detail['types']),
+                    $pokemon['types'],
+                    array_keys($pokemon['types']),
                 ),
                 'sprites' => ['other' => ['official-artwork' => [
                     'front_default' => "https://img.test/official-artwork/{$id}.png",
@@ -38,76 +62,54 @@ class PokemonIndexTest extends TestCase
             ]);
         }
 
-        Http::fake($fakes + [
-            'https://pokeapi.co/api/v2/pokemon?*' => Http::response(['results' => $results]),
-        ]);
+        $fakes['https://pokeapi.co/api/v2/pokemon?*'] = function (Request $request) use ($entries) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return Http::response([
+                'results' => array_slice($entries, (int) $query['offset'], (int) $query['limit']),
+            ]);
+        };
+
+        Http::fake($fakes);
     }
 
-    public function test_it_returns_merged_pokemon_list_in_the_specified_shape(): void
+    // ------------------------------------------------------------------ list
+
+    public function test_it_returns_a_bare_array_of_pokemon_in_the_specified_shape(): void
     {
         $this->fakePokeApi();
 
-        $response = $this->getJson('/api/v1/pokemons?page=1&limit=2');
-
-        $response->assertOk()
-            ->assertJsonPath('status', 'success')
-            ->assertJsonPath('message', 'Pokemon list retrieved successfully')
-            ->assertJsonStructure(['status', 'message', 'meta' => ['timestamp'], 'data'])
-            ->assertJsonPath('data', [
-                [
-                    'name' => 'bulbasaur',
-                    'image' => 'https://img.test/official-artwork/1.png',
-                    'types' => ['grass', 'poison'],
-                    'height' => 7,
-                    'weight' => 69,
-                ],
-                [
-                    'name' => 'ivysaur',
-                    'image' => 'https://img.test/official-artwork/2.png',
-                    'types' => ['grass', 'poison'],
-                    'height' => 10,
-                    'weight' => 130,
-                ],
-            ]);
+        $this->getJson('/api/pokemons?page=1&limit=2')
+            ->assertOk()
+            ->assertExactJson([$this->expected(1), $this->expected(2)]);
     }
 
     public function test_it_calculates_the_offset_from_page_and_limit(): void
     {
-        $this->fakePokeApi(count: 1, offset: 2);
+        $this->fakePokeApi();
 
-        $this->getJson('/api/v1/pokemons?page=2&limit=2')->assertOk();
+        $this->getJson('/api/pokemons?page=2&limit=2')
+            ->assertOk()
+            ->assertExactJson([$this->expected(3), $this->expected(4)]);
 
         Http::assertSent(fn (Request $request) => $request->url() === 'https://pokeapi.co/api/v2/pokemon?limit=2&offset=2');
     }
 
     public function test_it_defaults_to_page_one_with_twenty_items(): void
     {
-        $this->fakePokeApi(count: 0);
+        $this->fakePokeApi();
 
-        $this->getJson('/api/v1/pokemons')->assertOk()->assertJsonPath('data', []);
+        $this->getJson('/api/pokemons')->assertOk()->assertJsonCount(6);
 
         Http::assertSent(fn (Request $request) => $request->url() === 'https://pokeapi.co/api/v2/pokemon?limit=20&offset=0');
     }
 
-    public function test_it_serves_a_repeated_page_from_cache_without_calling_pokeapi_again(): void
-    {
-        $this->fakePokeApi();
-
-        $first = $this->getJson('/api/v1/pokemons?page=1&limit=2')->assertOk()->json('data');
-        Http::assertSentCount(3); // 1 list + 2 details
-
-        $second = $this->getJson('/api/v1/pokemons?page=1&limit=2')->assertOk()->json('data');
-
-        $this->assertSame($first, $second);
-        Http::assertSentCount(3);
-    }
-
     #[DataProvider('invalidQueries')]
-    public function test_it_rejects_invalid_pagination(string $query, string $field): void
+    public function test_it_rejects_invalid_query_parameters(string $query, string $field): void
     {
         Http::fake();
 
-        $this->getJson("/api/v1/pokemons?{$query}")
+        $this->getJson("/api/pokemons?{$query}")
             ->assertStatus(422)
             ->assertJsonStructure(['success', 'errors'])
             ->assertJsonValidationErrors($field);
@@ -122,6 +124,7 @@ class PokemonIndexTest extends TestCase
             'page not a number' => ['page=abc', 'page'],
             'limit zero' => ['limit=0', 'limit'],
             'limit above max' => ['limit=51', 'limit'],
+            'search too long' => ['search='.str_repeat('a', 51), 'search'],
         ];
     }
 
@@ -129,7 +132,7 @@ class PokemonIndexTest extends TestCase
     {
         Http::fake(['https://pokeapi.co/*' => Http::response('boom', 500)]);
 
-        $this->getJson('/api/v1/pokemons?page=1&limit=2')
+        $this->getJson('/api/pokemons?page=1&limit=2')
             ->assertStatus(502)
             ->assertJson(['status' => 'error', 'code' => 502, 'message' => 'Unable to fetch data from PokeAPI.']);
     }
@@ -138,13 +141,52 @@ class PokemonIndexTest extends TestCase
     {
         Http::fake([
             'https://pokeapi.co/api/v2/pokemon?*' => Http::response([
-                'results' => [['name' => 'bulbasaur', 'url' => 'https://pokeapi.co/api/v2/pokemon/1/']],
+                'results' => [['name' => 'bulbasaur', 'url' => $this->detailUrl(1)]],
             ]),
-            'https://pokeapi.co/api/v2/pokemon/1/' => Http::response('boom', 500),
+            $this->detailUrl(1) => Http::response('boom', 500),
         ]);
 
-        $this->getJson('/api/v1/pokemons?page=1&limit=1')
+        $this->getJson('/api/pokemons?page=1&limit=1')
             ->assertStatus(502)
             ->assertJson(['status' => 'error', 'code' => 502, 'message' => 'Unable to fetch data from PokeAPI.']);
+    }
+
+    // ---------------------------------------------------------------- search
+
+    public function test_it_filters_by_name_using_the_full_pokemon_list(): void
+    {
+        $this->fakePokeApi();
+
+        $this->getJson('/api/pokemons?search=char&limit=10')
+            ->assertOk()
+            ->assertExactJson([$this->expected(4), $this->expected(5), $this->expected(6)]);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0');
+        Http::assertNotSent(fn (Request $request) => $request->url() === $this->detailUrl(1));
+    }
+
+    public function test_search_ignores_case(): void
+    {
+        $this->fakePokeApi();
+
+        $this->getJson('/api/pokemons?search=CHARI')
+            ->assertOk()
+            ->assertExactJson([$this->expected(6)]);
+    }
+
+    public function test_search_results_are_paginated(): void
+    {
+        $this->fakePokeApi();
+
+        $this->getJson('/api/pokemons?search=char&page=2&limit=2')
+            ->assertOk()
+            ->assertExactJson([$this->expected(6)]);
+    }
+
+    public function test_search_with_no_match_returns_an_empty_array(): void
+    {
+        $this->fakePokeApi();
+
+        $this->getJson('/api/pokemons?search=missingno')->assertOk()->assertExactJson([]);
     }
 }
