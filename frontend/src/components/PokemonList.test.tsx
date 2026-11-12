@@ -2,14 +2,15 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PokemonList from "@/components/PokemonList";
 import { usePokemons } from "@/hooks/usePokemons";
+import { EAGER_CARD_COUNT } from "@/lib/constants";
 import type { Pokemon } from "@/types/pokemon";
 
 vi.mock("@/hooks/usePokemons", () => ({ usePokemons: vi.fn() }));
 
 const usePokemonsMock = vi.mocked(usePokemons);
 
-function pokemon(name: string): Pokemon {
-  return { name, image: null, types: ["normal"], height: 1, weight: 1 };
+function pokemon(name: string, image: string | null = null): Pokemon {
+  return { name, image, types: ["normal"], height: 1, weight: 1 };
 }
 
 type HookResult = ReturnType<typeof usePokemons>;
@@ -72,6 +73,19 @@ describe("PokemonList", () => {
 
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Bulbasaur" })).toBeInTheDocument();
+  });
+
+  it("loads the artwork of the cards above the fold immediately and the rest lazily", () => {
+    const many = Array.from({ length: EAGER_CARD_COUNT + 2 }, (_, index) =>
+      pokemon(`p${index}`, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${index}.png`),
+    );
+    mockHook({ pokemons: many });
+
+    render(<PokemonList query="" />);
+
+    const loading = screen.getAllByRole("img").map((image) => image.getAttribute("loading"));
+    expect(loading.slice(0, EAGER_CARD_COUNT)).toEqual(Array(EAGER_CARD_COUNT).fill("eager"));
+    expect(loading.slice(EAGER_CARD_COUNT)).toEqual(["lazy", "lazy"]);
   });
 
   it("tells the user when nothing matches the search", () => {

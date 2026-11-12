@@ -28,6 +28,13 @@ describe("Carousel", () => {
     expect(activeDot()).toHaveAccessibleName("Show slide 1");
   });
 
+  it("loads only the first slide immediately", () => {
+    render(<Carousel slides={slides} />);
+
+    const loading = screen.getAllByAltText(/slide/).map((image) => image.getAttribute("loading"));
+    expect(loading).toEqual(["eager", "lazy", "lazy"]);
+  });
+
   it("rotates automatically and wraps around to the first slide", () => {
     render(<Carousel slides={slides} intervalMs={1000} />);
 

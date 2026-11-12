@@ -37,7 +37,7 @@ export default function Carousel({ slides, intervalMs = 4000 }: CarouselProps) {
           src={slide.src}
           alt={slide.alt}
           fill
-          priority={index === 0}
+          loading={index === 0 ? "eager" : "lazy"}
           sizes="(min-width: 1024px) 75vw, 100vw"
           aria-hidden={index !== active}
           className={`object-cover transition-opacity duration-700 ${index === active ? "opacity-100" : "opacity-0"}`}

@@ -32,4 +32,16 @@ describe("PokemonCard", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ivysaur" })).toBeInTheDocument();
   });
+
+  it("loads the artwork lazily by default", () => {
+    render(<PokemonCard pokemon={ivysaur} />);
+
+    expect(screen.getByAltText("Ivysaur")).toHaveAttribute("loading", "lazy");
+  });
+
+  it("loads the artwork immediately when the card is above the fold", () => {
+    render(<PokemonCard pokemon={ivysaur} eager />);
+
+    expect(screen.getByAltText("Ivysaur")).toHaveAttribute("loading", "eager");
+  });
 });

@@ -5,7 +5,13 @@ import type { Pokemon } from "@/types/pokemon";
 
 const IMAGE_SIZE = 72;
 
-export default function PokemonCard({ pokemon }: { pokemon: Pokemon }) {
+type PokemonCardProps = {
+  pokemon: Pokemon;
+  /** Load the artwork immediately. Use for cards that are visible without scrolling. */
+  eager?: boolean;
+};
+
+export default function PokemonCard({ pokemon, eager = false }: PokemonCardProps) {
   const name = formatName(pokemon.name);
 
   return (
@@ -16,6 +22,7 @@ export default function PokemonCard({ pokemon }: { pokemon: Pokemon }) {
           alt={name}
           width={IMAGE_SIZE}
           height={IMAGE_SIZE}
+          loading={eager ? "eager" : "lazy"}
           className="shrink-0 object-contain"
         />
       ) : (

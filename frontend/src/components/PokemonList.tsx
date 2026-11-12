@@ -6,6 +6,7 @@ import PokemonCard from "@/components/PokemonCard";
 import PokemonCardSkeleton from "@/components/PokemonCardSkeleton";
 import { useInView } from "@/hooks/useInView";
 import { usePokemons } from "@/hooks/usePokemons";
+import { EAGER_CARD_COUNT } from "@/lib/constants";
 
 const SKELETON_COUNT = 6;
 
@@ -21,8 +22,8 @@ export default function PokemonList({ query }: { query: string }) {
   return (
     <div aria-busy={isLoading}>
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {pokemons.map((pokemon) => (
-          <PokemonCard key={pokemon.name} pokemon={pokemon} />
+        {pokemons.map((pokemon, index) => (
+          <PokemonCard key={pokemon.name} pokemon={pokemon} eager={index < EAGER_CARD_COUNT} />
         ))}
         {isLoading &&
           Array.from({ length: SKELETON_COUNT }, (_, index) => <PokemonCardSkeleton key={index} />)}
