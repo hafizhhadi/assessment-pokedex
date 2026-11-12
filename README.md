@@ -17,8 +17,8 @@ A Pokédex built on [PokeAPI](https://pokeapi.co/): a **Laravel** API aggregates
 - The frontend only calls the Laravel API, never PokeAPI directly.
 
 ## Requirements
-- PHP >= 8.3 and Composer
-- Node.js >= 20.9 and npm
+- PHP >= 8.4.1 and Composer (Laravel 13; its locked Symfony 8 dependencies need 8.4.1, so PHP 8.3 will not work)
+- Node.js >= 20.19 and npm (the app itself needs 20.9; the test tooling needs 20.19)
 - Internet access (the backend calls pokeapi.co)
 
 ## Setup
